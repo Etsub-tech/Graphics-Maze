@@ -186,3 +186,55 @@ def solve_maze_animated(surface, clock):
         clock.tick(1000 // SOLVE_DELAY)
 
     return None   # no path found
+
+#  main
+def main():
+    pygame.init()
+    width  = C * CELL
+    height = R * CELL
+    surface = pygame.display.set_mode((width, height))
+    pygame.display.set_caption("Maze Generator & Solver")
+    clock = pygame.time.Clock()
+
+    font = pygame.font.SysFont("monospace", 14)
+
+    print("=" * 50)
+    print("  MAZE GENERATOR & SOLVER")
+    print(f"  Grid: {R} rows × {C} columns")
+    print("  Generating maze with DFS mouse...")
+    print("=" * 50)
+
+    # ── Phase 1: Generate ──
+    generate_maze_animated(surface, clock)
+    print("  Maze generated!")
+
+    # Brief pause so the user can admire the maze
+    pause_start = time.time()
+    while time.time() - pause_start < 1.0:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+
+    print("  Solving maze with backtracking...")
+
+    #Phase 2: Solve
+    path = solve_maze_animated(surface, clock)
+
+    if path:
+        print(f"  Solved! Path length: {len(path)} cells.")
+    else:
+        print("  No solution found.")
+
+    print("  Close the window to quit.")
+
+    # it keeps window open until user closes it
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+        clock.tick(30)
+
+
+if name == "__main__":
+    main()
