@@ -76,3 +76,19 @@ def generate_maze_animated(surface, clock):
         else:
             # backtrack
             stack.pop()
+
+        surface.fill(GRID_BG)
+        # Shade visited cells
+        for row in range(R):
+            for col in range(C):
+                if gen_visited[row][col]:
+                    draw_cell_bg(surface, row, col, VISITED_BG)
+        # Highlight current mouse position
+        if stack:
+            cr, cc = stack[-1]
+            draw_cell_bg(surface, cr, cc, MOUSE_COL)
+            draw_dot(surface, cr, cc, WHITE)
+
+        draw_walls(surface)
+        pygame.display.flip()
+        clock.tick(1000 // GEN_DELAY)
