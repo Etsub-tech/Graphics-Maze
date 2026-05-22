@@ -1,4 +1,84 @@
+import pygame
+import random
+import sys
+import time
 
+R = 15          # rows
+C = 20          # columns
+CELL = 36       # pixels per cell
+
+# Colours
+WHITE      = (245, 243, 238)
+BLACK      = (30,  28,  26)
+WALL_COL   = (30,  28,  26)
+VISITED_BG = (214, 237, 249)   # light blue, the generator
+MOUSE_COL  = (55,  138, 221)   # blue dot, position of the current mouse
+DEAD_END   = (240, 149, 123)   # coral indicates dead end
+SOLUTION   = (150, 196,  89)   # green, final solution path
+START_COL  = (239, 159,  39)   # amber, start of the cell
+END_COL    = (239, 159,  39)   # amber, end cell
+GRID_BG    = (245, 243, 238)
+
+GEN_DELAY  = 10
+SOLVE_DELAY = 30
+BONUS_MODE = True
+
+northWall = [[1] * C for _ in range(R + 1)]
+eastWall  = [[1] * (C + 1) for _ in range(R)]
+
+gen_visited = [[False] * C for _ in range(R)]
+
+
+def reset_walls():
+    global northWall, eastWall, gen_visited
+    northWall   = [[1] * C for _ in range(R + 1)]
+    eastWall    = [[1] * (C + 1) for _ in range(R)]
+    gen_visited = [[False] * C for _ in range(R)]
+
+
+def cell_rect(r, c):
+    return (c * CELL, r * CELL, CELL, CELL)
+
+
+def draw_cell_bg(surface, r, c, colour):
+    pygame.draw.rect(surface, colour, cell_rect(r, c))
+
+
+def draw_walls(surface):
+    
+    W = C * CELL
+    H = R * CELL
+
+    for r in range(R):
+        for c in range(C):
+            x, y = c * CELL, r * CELL
+
+            # North wall
+            if northWall[r][c]:
+                pygame.draw.line(surface, WALL_COL, (x, y), (x + CELL, y), 2)
+            
+            # East wall
+            if eastWall[r][c + 1]:
+                pygame.draw.line(surface, WALL_COL,
+                                 (x + CELL, y), (x + CELL, y + CELL), 2)
+
+
+    for c in range(C):
+        if northWall[R][c]:
+            x = c * CELL
+            pygame.draw.line(surface, WALL_COL, (x, H), (x + CELL, H), 2)
+
+    # Left border: eastWall[r][0] is the wall on the LEFT of column 0
+    for r in range(R):
+        if eastWall[r][0]:
+            y = r * CELL
+            pygame.draw.line(surface, WALL_COL, (0, y), (0, y + CELL), 2)
+
+
+def draw_dot(surface, r, c, colour, radius_frac=0.28):
+    cx = c * CELL + CELL // 2
+    cy = r * CELL + CELL // 2
+    pygame.draw.circle(surface, colour, (cx, cy), int(CELL * radius_frac))
 
 
 def unvisited_neighbours(r, c):
