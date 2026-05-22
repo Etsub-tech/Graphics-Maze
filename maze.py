@@ -19,7 +19,7 @@ START_COL  = (239, 159,  39)   # amber, start of the cell
 END_COL    = (239, 159,  39)   # amber, end cell
 GRID_BG    = (245, 243, 238)
 
-GEN_DELAY  = 10
+GEN_DELAY  = 15
 SOLVE_DELAY = 30
 BONUS_MODE = True
 
@@ -81,82 +81,81 @@ def draw_dot(surface, r, c, colour, radius_frac=0.28):
     pygame.draw.circle(surface, colour, (cx, cy), int(CELL * radius_frac))
 
 
+##generating the maze
 def unvisited_neighbours(r, c):
     """Return list of (nr, nc, direction) for unvisited neighbours."""
     result = []
-
-    if r > 0 and not gen_visited[r - 1][c]:
-        result.append((r - 1, c, 'N'))
-
-    if r < R - 1 and not gen_visited[r + 1][c]:
-        result.append((r + 1, c, 'S'))
-
-    if c > 0 and not gen_visited[r][c - 1]:
-        result.append((r, c - 1, 'W'))
-
-    if c < C - 1 and not gen_visited[r][c + 1]:
-        result.append((r, c + 1, 'E'))
-
+    if r > 0   and not gen_visited[r - 1][c]: result.append((r-1, c, 'N'))
+    if r < R-1 and not gen_visited[r + 1][c]: result.append((r+1, c, 'S'))
+    if c > 0   and not gen_visited[r][c - 1]: result.append((r, c-1, 'W'))
+    if c < C-1 and not gen_visited[r][c + 1]: result.append((r, c+1, 'E'))
     return result
 
+
 def remove_wall(r, c, direction):
+    if direction == 'N': northWall[r][c]     = 0
+    elif direction == 'S': northWall[r+1][c] = 0
+    elif direction == 'W': eastWall[r][c]    = 0
+    elif direction == 'E': eastWall[r][c+1]  = 0
 
-    if direction == 'N':
-        northWall[r][c] = 0
 
-    elif direction == 'S':
-        northWall[r + 1][c] = 0
-
-    elif direction == 'W':
-        eastWall[r][c] = 0
-
-    elif direction == 'E':
-        eastWall[r][c + 1] = 0
-
-def generate_maze_animated(surface, clock):
-
+def generate_maze_animated(surface, clock, start_row, end_row):
     reset_walls()
 
-    # optional openings
-    northWall[0][0] = 0
-    northWall[R][C - 1] = 0
+    
+    eastWall[start_row][0] = 0
+    eastWall[end_row][C]   = 0
 
-    # random starting point
+    # the mouse starts at a random cell
     sr, sc = random.randrange(R), random.randrange(C)
-
     gen_visited[sr][sc] = True
-
     stack = [(sr, sc)]
 
     while stack:
-
-        # allow window closing
+        
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+                pygame.quit(); sys.exit()
 
         r, c = stack[-1]
-
         neighbours = unvisited_neighbours(r, c)
 
         if neighbours:
 
-            # choose random neighbour
+            # it chooses a random unvisited neighbour
             nr, nc, direction = random.choice(neighbours)
 
-            # remove wall between cells
+            # it removes the wall toward the chosen neighbour
             remove_wall(r, c, direction)
 
-            # move forward
-            gen_visited[nr][nc] = True
+            # for the bonus part
+            if BONUS_MODE and random.random() < 0.05:
 
+                possible = []
+
+                if r > 0:
+                    possible.append('N')
+                if r < R - 1:
+                    possible.append('S')
+                if c > 0:
+                    possible.append('W')
+                if c < C - 1:
+                    possible.append('E')
+
+                if possible:
+                    bonus_dir = random.choice(possible)
+                    remove_wall(r, c, bonus_dir)
+
+            # continue DFS
+            gen_visited[nr][nc] = True
             stack.append((nr, nc))
 
         else:
-            # backtrack
+            #backtracks for the dead end 
             stack.pop()
 
+
+        
         surface.fill(GRID_BG)
         # Shade visited cells
         for row in range(R):
@@ -172,6 +171,8 @@ def generate_maze_animated(surface, clock):
         draw_walls(surface)
         pygame.display.flip()
         clock.tick(1000 // GEN_DELAY)
+
+
 # maze solver
 def can_move(r, c, direction):
     
@@ -182,20 +183,17 @@ def can_move(r, c, direction):
     return False
 
 
-def solve_maze_animated(surface, clock):
+def solve_maze_animated(surface, clock, start_row, end_row):
     # cell_state: 0 means unvisited, 1 means on stack (active), 2 means dead end
     cell_state = [[0] * C for _ in range(R)]
     parent     = [[None] * C for _ in range(R)]   
 
     # Start at top left, end at bottom right
-    start_row = random.randrange(R)
-    end_row = random.randrange(R)
-   
     start = (start_row, 0)
     end = (end_row, C-1)
 
     stack = [start]
-    cell_state[0][0] = 1
+    cell_state[start_row][0] = 1
 
     DIRS = ['N', 'S', 'W', 'E']
 
@@ -267,6 +265,7 @@ def solve_maze_animated(surface, clock):
 
     return None   # no path found
 
+
 #  main
 def main():
     pygame.init()
@@ -284,8 +283,11 @@ def main():
     print("  Generating maze with DFS mouse...")
     print("=" * 50)
 
+    start_row = random.randrange(R)
+    end_row   = random.randrange(R)
+
     # ── Phase 1: Generate ──
-    generate_maze_animated(surface, clock)
+    generate_maze_animated(surface, clock, start_row, end_row)
     print("  Maze generated!")
 
     # Brief pause so the user can admire the maze
@@ -298,7 +300,7 @@ def main():
     print("  Solving maze with backtracking...")
 
     #Phase 2: Solve
-    path = solve_maze_animated(surface, clock)
+    path = solve_maze_animated(surface, clock, start_row, end_row)
 
     if path:
         print(f"  Solved! Path length: {len(path)} cells.")
@@ -316,5 +318,5 @@ def main():
         clock.tick(30)
 
 
-if name == "__main__":
+if __name__ == "__main__":
     main()
