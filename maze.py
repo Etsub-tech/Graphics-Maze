@@ -92,3 +92,97 @@ def generate_maze_animated(surface, clock):
         draw_walls(surface)
         pygame.display.flip()
         clock.tick(1000 // GEN_DELAY)
+# maze solver
+def can_move(r, c, direction):
+    
+    if direction == 'N': return r > 0   and northWall[r][c]     == 0
+    if direction == 'S': return r < R-1 and northWall[r+1][c]   == 0
+    if direction == 'W': return c > 0   and eastWall[r][c]       == 0
+    if direction == 'E': return c < C-1 and eastWall[r][c+1]     == 0
+    return False
+
+
+def solve_maze_animated(surface, clock):
+    # cell_state: 0 means unvisited, 1 means on stack (active), 2 means dead end
+    cell_state = [[0] * C for _ in range(R)]
+    parent     = [[None] * C for _ in range(R)]   
+
+    # Start at top left, end at bottom right
+    start_row = random.randrange(R)
+    end_row = random.randrange(R)
+   
+    start = (start_row, 0)
+    end = (end_row, C-1)
+
+    stack = [start]
+    cell_state[0][0] = 1
+
+    DIRS = ['N', 'S', 'W', 'E']
+
+    while stack:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+
+        r, c = stack[-1]
+
+        #Goal reached 
+        if (r, c) == end:
+            # Reconstruct path
+            path = []
+            cur = end
+            while cur is not None:
+                path.append(cur)
+                cur = parent[cur[0]][cur[1]]
+            path.reverse()
+
+            # Draw solution
+            surface.fill(GRID_BG)
+            for row in range(R):
+                for col in range(C):
+                    if cell_state[row][col] == 2:
+                        draw_cell_bg(surface, row, col, DEAD_END)
+            for (pr, pc) in path:
+                draw_cell_bg(surface, pr, pc, SOLUTION)
+            draw_walls(surface)
+            draw_dot(surface, start[0], start[1], START_COL)
+            draw_dot(surface, end[0],   end[1],   END_COL)
+            pygame.display.flip()
+            return path
+
+        #trying a random direction to move
+        random.shuffle(DIRS)
+        moved = False
+        for d in DIRS:
+            if can_move(r, c, d):
+                nr, nc = (r-1,c) if d=='N' else (r+1,c) if d=='S' else \
+                         (r,c-1) if d=='W' else (r,c+1)
+                if cell_state[nr][nc] == 0:
+                    cell_state[nr][nc] = 1
+                    parent[nr][nc] = (r, c)
+                    stack.append((nr, nc))
+                    moved = True
+                    break
+
+        if not moved:
+            # Dead end: mark and backtrack
+            cell_state[r][c] = 2
+            stack.pop()
+
+        surface.fill(GRID_BG)
+        for row in range(R):
+            for col in range(C):
+                if cell_state[row][col] == 1:
+                    draw_cell_bg(surface, row, col, VISITED_BG)
+                elif cell_state[row][col] == 2:
+                    draw_cell_bg(surface, row, col, DEAD_END)
+        if stack:
+            cr, cc = stack[-1]
+            draw_dot(surface, cr, cc, MOUSE_COL)
+        draw_walls(surface)
+        draw_dot(surface, start[0], start[1], START_COL)
+        draw_dot(surface, end[0],   end[1],   END_COL)
+        pygame.display.flip()
+        clock.tick(1000 // SOLVE_DELAY)
+
+    return None   # no path found
